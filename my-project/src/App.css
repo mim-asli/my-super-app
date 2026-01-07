@@ -2,8 +2,32 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f0f2f5;
-  text-align: center;
+  min-height: 100vh;
+  background-color: #0f172a; /* رنگ پس‌زمینه تیره */
+  color: white;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* اسکرول‌بار زیبا */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1e293b; 
+}
+::-webkit-scrollbar-thumb {
+  background: #475569; 
+  border-radius: 4px;
 }

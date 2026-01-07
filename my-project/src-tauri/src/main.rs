@@ -1,14 +1,24 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions, Pool, Sqlite, FromRow};
 use sysinfo::System;
+use serde::Serialize; // برای اینکه بتونیم داده رو به جیسون تبدیل کنیم
 
-// ساختار نگهدارنده دیتابیس
+// ساختار دیتابیس
 struct AppState {
     db: Pool<Sqlite>,
 }
 
-// --- دستور ۱: وضعیت سیستم ---
+// ساختار یک یادداشت (دقیقاً مثل جدول دیتابیس)
+#[derive(Debug, Serialize, FromRow)]
+struct Note {
+    id: i64,
+    title: String,
+    content: Option<String>,
+    // تاریخ رو فعلاً نمی‌گیریم تا پیچیده نشه
+}
+
+// --- دستور ۱: رم سیستم ---
 #[tauri::command]
 fn get_system_stats() -> String {
     let mut sys = System::new_all();
@@ -18,23 +28,30 @@ fn get_system_stats() -> String {
     format!("RAM: {} GB Used / {} GB Total", used_gb, total_gb)
 }
 
-// --- دستور ۲: ذخیره یادداشت (جدید) ---
-// این تابع متن رو از فرانت‌اند می‌گیره و تو دیتابیس ذخیره می‌کنه
+// --- دستور ۲: ذخیره یادداشت ---
 #[tauri::command]
 async fn add_note(state: tauri::State<'_, AppState>, text: String) -> Result<String, String> {
-    // دستور SQL برای وارد کردن داده
-    let query = "INSERT INTO notes (title, content) VALUES ('New Note', $1)";
-    
+    let query = "INSERT INTO notes (title, content) VALUES ('Note', $1)";
     sqlx::query(query)
-        .bind(text) // متن کاربر رو می‌ذاره جای $1
-        .execute(&state.db) // روی دیتابیس اجرا می‌کنه
+        .bind(text)
+        .execute(&state.db)
         .await
-        .map_err(|e| e.to_string())?; // اگه ارور داد، متنش رو برگردون
-
-    Ok("Note saved successfully!".to_string())
+        .map_err(|e| e.to_string())?;
+    Ok("Saved!".to_string())
 }
 
-// --- شروع برنامه ---
+// --- دستور ۳: گرفتن لیست یادداشت‌ها (جدید) ---
+#[tauri::command]
+async fn get_notes(state: tauri::State<'_, AppState>) -> Result<Vec<Note>, String> {
+    // همه یادداشت‌ها رو بگیر و بر اساس جدیدترین مرتب کن
+    let notes = sqlx::query_as::<_, Note>("SELECT id, title, content FROM notes ORDER BY id DESC")
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    Ok(notes)
+}
+
 #[tokio::main]
 async fn main() {
     const DB_URL: &str = "sqlite://app.db";
@@ -48,7 +65,6 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
-    // ساخت جدول (اگر نباشد)
     sqlx::query("CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -58,8 +74,8 @@ async fn main() {
 
     tauri::Builder::default()
         .manage(AppState { db: db_pool }) 
-        // نکته مهم: دستور جدید رو اینجا اضافه کردیم 👇
-        .invoke_handler(tauri::generate_handler![get_system_stats, add_note])
+        // دستور get_notes رو اینجا اضافه کردیم 👇
+        .invoke_handler(tauri::generate_handler![get_system_stats, add_note, get_notes])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
