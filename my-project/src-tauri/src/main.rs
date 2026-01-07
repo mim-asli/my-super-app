@@ -52,6 +52,17 @@ async fn get_notes(state: tauri::State<'_, AppState>) -> Result<Vec<Note>, Strin
     Ok(notes)
 }
 
+// --- دستور ۴: حذف یادداشت ---
+#[tauri::command]
+async fn delete_note(state: tauri::State<'_, AppState>, id: i64) -> Result<(), String> {
+    sqlx::query("DELETE FROM notes WHERE id = $1")
+        .bind(id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     const DB_URL: &str = "sqlite://app.db";
@@ -75,7 +86,7 @@ async fn main() {
     tauri::Builder::default()
         .manage(AppState { db: db_pool }) 
         // دستور get_notes رو اینجا اضافه کردیم 👇
-        .invoke_handler(tauri::generate_handler![get_system_stats, add_note, get_notes])
+        .invoke_handler(tauri::generate_handler![get_system_stats, add_note, get_notes, delete_note])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
