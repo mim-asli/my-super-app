@@ -3,30 +3,49 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 function App() {
-  // این متغیر مثل یک ظرف هست که متن رم توش قرار میگیره
-  const [stats, setStats] = useState("Click the button...");
+  const [stats, setStats] = useState("System ready...");
+  const [noteText, setNoteText] = useState(""); // متنی که کاربر تایپ می‌کنه
 
-  // این تابع وقتی دکمه کلیک بشه اجرا میشه
+  // تابع چک کردن رم
   async function checkSystem() {
-    setStats("Loading..."); // اول بزن لودینگ تا کاربر بفهمه یه خبریه
-    // اینجا به Rust دستور میدیم و منتظر جواب میمونیم
     const result = await invoke("get_system_stats");
-    // جواب رو میریزیم تو متغیر
     setStats(result as string);
+  }
+
+  // تابع ذخیره یادداشت
+  async function saveNote() {
+    if (!noteText) return; // اگه خالی بود کاری نکن
+    try {
+      // دستور add_note رو صدا می‌زنیم و متن رو بهش میدیم
+      const result = await invoke("add_note", { text: noteText });
+      setStats(result as string); // پیام موفقیت رو نشون بده
+      setNoteText(""); // کادر رو خالی کن
+    } catch (error) {
+      setStats("Error: " + error);
+    }
   }
 
   return (
     <div className="container">
-      <h1 className="text-3xl font-bold mb-4">Super App Monitor</h1>
-      
-      <div className="p-6 bg-slate-800 rounded-xl shadow-lg text-white">
-        <p className="mb-4 text-xl">{stats}</p>
-        
-        <button 
-          onClick={checkSystem}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition"
-        >
-          Check RAM Usage
+      <h1 className="text-3xl font-bold mb-6 text-blue-400">Super App Database</h1>
+
+      {/* بخش مانیتورینگ */}
+      <div className="card mb-8">
+        <p className="mb-2 text-yellow-300">{stats}</p>
+        <button onClick={checkSystem} className="btn">Check RAM</button>
+      </div>
+
+      {/* بخش یادداشت نویسی */}
+      <div className="card flex flex-col gap-3">
+        <input
+          type="text"
+          placeholder="Write something here..."
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          className="p-3 rounded text-black"
+        />
+        <button onClick={saveNote} className="btn bg-green-600 hover:bg-green-700">
+          Save to Database
         </button>
       </div>
     </div>
