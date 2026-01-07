@@ -1,50 +1,35 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  // این متغیر مثل یک ظرف هست که متن رم توش قرار میگیره
+  const [stats, setStats] = useState("Click the button...");
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  // این تابع وقتی دکمه کلیک بشه اجرا میشه
+  async function checkSystem() {
+    setStats("Loading..."); // اول بزن لودینگ تا کاربر بفهمه یه خبریه
+    // اینجا به Rust دستور میدیم و منتظر جواب میمونیم
+    const result = await invoke("get_system_stats");
+    // جواب رو میریزیم تو متغیر
+    setStats(result as string);
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="container">
+      <h1 className="text-3xl font-bold mb-4">Super App Monitor</h1>
+      
+      <div className="p-6 bg-slate-800 rounded-xl shadow-lg text-white">
+        <p className="mb-4 text-xl">{stats}</p>
+        
+        <button 
+          onClick={checkSystem}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition"
+        >
+          Check RAM Usage
+        </button>
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    </div>
   );
 }
 
