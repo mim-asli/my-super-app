@@ -6,7 +6,9 @@ use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions, FromRow, Pool, S
 use sysinfo::System;
 // ابزار جدید رمزنگاری 👇
 use magic_crypt::{new_magic_crypt, MagicCryptTrait}; 
+use local_ip_address::local_ip; // برای پیدا کردن آی‌پی
 
+// --- وضعیت برنامه ---
 struct AppState {
     db: Pool<Sqlite>,
 }
@@ -143,6 +145,15 @@ async fn delete_password_entry(state: tauri::State<'_, AppState>, id: i64) -> Re
     Ok(())
 }
 
+// --- دستور ۶: دریافت آی‌پی سیستم ---
+#[tauri::command]
+fn get_my_ip() -> String {
+    match local_ip() {
+        Ok(ip) => ip.to_string(),
+        Err(e) => format!("Error: {}", e),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     const DB_URL: &str = "sqlite://app.db";
@@ -165,7 +176,7 @@ async fn main() {
         .manage(AppState { db: db_pool })
         .invoke_handler(tauri::generate_handler![
             get_system_stats, add_note, get_notes, delete_note, generate_password,
-            add_password_entry, get_password_entries, delete_password_entry
+            add_password_entry, get_password_entries, delete_password_entry, get_my_ip
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
